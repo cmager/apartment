@@ -51,16 +51,37 @@ module Apartment
       end
 
       #   Reset search path to default search_path
-      #   Set the table_name to always use the default namespace for excluded models
+      #   Default confiugration looks like:
+      #
+      #   Apartment.excluded_models = %w(Tenant Users Orders Products Customers)
+      #
+      #   A configuration as a hash can look like this:
+      #   Schema name is the hash key. Model class names are given as a string array.
+      #
+      #   Apartment.excluded_models = {
+      #     public: %w(Tenant Users),
+      #     store: %w(Orders Products Customers)
+      #   }
       #
       def process_excluded_models
-        Apartment.excluded_models.each do |excluded_model|
-          excluded_model.constantize.tap do |klass|
-            # Ensure that if a schema *was* set, we override
-            table_name = klass.table_name.split('.', 2).last
+        model_config = Apartment.excluded_models
 
-            klass.table_name = "#{default_tenant}.#{table_name}"
+        process_models = ->(schema_name, excluded_models) do
+          excluded_models.each do |excluded_model|
+            excluded_model.constantize.tap do |klass|
+              # Ensure that if a schema *was* set, we override
+              table_name = klass.table_name.split('.', 2).last
+              klass.table_name = "#{schema_name}.#{table_name}"
+            end
           end
+        end
+
+        if model_config.is_a?(Hash)
+          model_config.each do |schema_name, models|
+            process_models.call schema_name, models
+          end
+        else
+          process_models.call default_tenant, model_config
         end
       end
 
@@ -103,6 +124,8 @@ module Apartment
 
     private
 
+      #   This enables you to have
+      #   This enables you to have
       #   Generate the final search path to set including persistent_schemas
       #
       def full_search_path
