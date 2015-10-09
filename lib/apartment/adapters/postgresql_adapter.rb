@@ -124,8 +124,6 @@ module Apartment
 
     private
 
-      #   This enables you to have
-      #   This enables you to have
       #   Generate the final search path to set including persistent_schemas
       #
       def full_search_path
